@@ -261,7 +261,7 @@ var dahPFResultPage = Vue.createApp({
               if (isCollectionPage && collectionName) {
                 url += `&collection_id=${collectionName}`;
               }
-              const accessToken = "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";
+              const accessToken = "";
 
               axios
                 .get(url, {
