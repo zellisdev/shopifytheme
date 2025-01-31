@@ -1,0 +1,65 @@
+.part-finder-section {
+  margin: 20px auto;
+}
+.part-finder-section .dropdown-container {
+  margin-bottom: 15px;
+}
+
+/* card CSS */
+.partfinder-status {
+  display: inline-block;
+  width: 100%;
+}
+.partfinder-status .status {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 0.7rem;
+  margin-bottom: 0;
+}
+.partfinder-status .status.dahnotfitted {
+  color: #dc3545;
+}
+.partfinder-status .status.dahfitted {
+  color: #28a745;
+}
+
+.parts-finder-content .pfdropdowns {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.parts-finder-content .pfdropdowns .wrap-select {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 15px;
+}
+.parts-finder-content .pfdropdowns .wrap-select .wrap-select-inline {
+  width: 100%;
+  padding: 0 15px;
+}
+.parts-finder-content .pfdropdowns .wrap-select .wrap-select-inline select,
+.parts-finder-content .pfdropdowns .dah_compat-btn {
+  padding: 10px 15px;
+  height: 45px;
+  outline: none;
+  box-shadow: none;
+}
+.partfinder-searched div#parts_finder {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.partfinder-searched div#parts_finder .pfresult_text {
+  margin: 0;
+  padding: 0 30px;
+  flex-grow: 1;
+  text-align: center;
+  font-size: 20px;
+}
+.partfinder-searched div#parts_finder p.pfresult_links {
+  display: grid;
+  grid-column-gap: 30px;
+  grid-template-columns: 1fr 1fr;
+}

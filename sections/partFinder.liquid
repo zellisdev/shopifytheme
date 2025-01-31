@@ -1,0 +1,329 @@
+
+{% assign pf_active = request.cookies.pf_active %}
+{% if pf_active == 'true' %}
+  {% assign compatible_products = request.cookies.compatible_products | split: ',' %}
+  {% assign filtered_products = collection.products | where: 'id', compatible_products %}
+{% else %}
+  {% assign filtered_products = collection.products %}
+{% endif %}
+{%- for product in filtered_products -%}
+  {% assign lazy_load = false %}
+  {%- if forloop.index > 2 -%}
+    {%- assign lazy_load = true -%}
+  {%- endif -%}
+  {% render 'card-product',
+    card_product: product,
+    media_aspect_ratio: 'portrait',
+    show_secondary_image: false,
+    show_vendor: false,
+    show_rating: false,
+    lazy_load: lazy_load,
+    show_quick_add: false
+  %}
+{%- endfor -%}
+
+{{ 'template-collection.css' | asset_url | stylesheet_tag }}
+{{ 'component-loading-overlay.css' | asset_url | stylesheet_tag }}
+{{ 'component-card.css' | asset_url | stylesheet_tag }}
+{{ 'component-price.css' | asset_url | stylesheet_tag }}
+{{ 'component-pagination.css' | asset_url | stylesheet_tag }}
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    .section-{{ section.id }}-padding {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+{%- endstyle -%}
+ {% if request.path contains '/search' %}
+  <div class="template-search{% unless search.performed and search.results_count > 0 %} template-search--empty{% endunless %} section-{{ section.id }}-padding">
+    <div class="template-search__header page-width">
+      <h1 class="h2 center">
+        {%- if search.performed -%}
+          {{- 'templates.search.title' | t -}}
+        {%- else -%}
+          {{- 'general.search.search' | t -}}
+        {%- endif -%}
+      </h1>
+      <div class="template-search__search">
+        {%- if settings.predictive_search_enabled -%}
+          <predictive-search data-loading-text="{{ 'accessibility.loading' | t }}">
+        {%- endif -%}
+            <main-search>
+              <form action="{{ routes.search_url }}" method="get" role="search" class="search">
+                <div class="field">
+                  <input
+                    class="search__input field__input"
+                    id="Search-In-Template"
+                    type="search"
+                    name="q"
+                    value="{{ search.terms | escape }}"
+                    placeholder="{{ 'general.search.search' | t }}"
+                    {%- if settings.predictive_search_enabled -%}
+                      role="combobox"
+                      aria-expanded="false"
+                      aria-owns="predictive-search-results"
+                      aria-controls="predictive-search-results"
+                      aria-haspopup="listbox"
+                      aria-autocomplete="list"
+                      autocorrect="off"
+                      autocomplete="off"
+                      autocapitalize="off"
+                      spellcheck="false"
+                    {%- endif -%}
+                  >
+                  <label class="field__label" for="Search-In-Template">{{ 'general.search.search' | t }}</label>
+                  <input name="options[prefix]" type="hidden" value="last">
+
+                  {%- if settings.predictive_search_enabled -%}
+                    <div class="predictive-search predictive-search--search-template" tabindex="-1" data-predictive-search>
+                      <div class="predictive-search__loading-state">
+                        <svg aria-hidden="true" focusable="false" class="spinner" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg">
+                          <circle class="path" fill="none" stroke-width="6" cx="33" cy="33" r="30"></circle>
+                        </svg>
+                      </div>
+                    </div>
+
+                    <span class="predictive-search-status visually-hidden" role="status" aria-hidden="true"></span>
+                  {%- endif -%}
+
+                  <button type="reset" class="reset__button field__button{% if search.terms == blank %} hidden{% endif %}" aria-label="{{ 'general.search.reset' | t }}">
+                    <svg class="icon icon-close" aria-hidden="true" focusable="false">
+                      <use xlink:href="#icon-reset">
+                    </svg>
+                  </button>
+                  <button type="submit" class="search__button field__button" aria-label="{{ 'general.search.search' | t }}">
+                    <svg class="icon icon-search" aria-hidden="true" focusable="false">
+                      <use xlink:href="#icon-search">
+                    </svg>
+                  </button>
+                </div>
+              </form>
+            </main-search>
+        {%- if settings.predictive_search_enabled -%}
+          </predictive-search>
+        {%- endif -%}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div id="partfinderresult">
+  <form method="post">
+    <label for="accept">Show All</label>
+    <input type="checkbox" id="accept" name="accept" value="yes">
+  </form>
+  <div class="part-finder-section page-width">
+    <div v-if="loading" style="width: 100%;min-height: 250px;display: flex;align-items: center;">
+      <div style="display: flex;align-items: center;justify-content: center;height: 100%;width: 100%;">
+        <p>Loading result.....</p>
+      </div>
+    </div>
+    <div v-if="!loading && noprds" class="collection collection--empty page-width">
+      <div class="title-wrapper center">
+        <h2 class="title title--primary">
+          {{ 'sections.collection_template.empty' | t -}}
+        </h2>
+      </div>
+    </div>
+    <div v-if="!loading && !noprds" class="collection page-width">
+      <ul
+        id="product-grid"
+        class="
+          grid product-grid grid--2-col-tablet-down
+          grid--3-col-desktop
+        "
+      >
+        <li class="grid__item" v-for="(product, index) in products" :key="index">
+          <div class="card-wrapper product-card-wrapper underline-links-hover">
+            <div
+              :class="
+                [
+                  'card card--standard',
+                  { 'card--media': product.image, 'card--text': !product.image },
+                  { 'card--horizontal': horizontalClass }
+                ]
+              "
+              :style="{ '--ratio-percent': '125%' }"
+            >
+              <div
+                class="card__inner color-background-2 gradient ratio"
+                :style="{ '--ratio-percent': '125%' }"
+              >
+                <!-- Product Image Section -->
+                <div v-if="product.image" class="card__media">
+                  <div class="media media--transparent media--hover-effect">
+                    <img
+                      :src="product.image.src"
+                      :alt="product.image.alt"
+                      class="motion-reduce"
+                      loading="lazy"
+                    >
+                    <img
+                      v-if="product.images[1] && showSecondaryImage"
+                      :src="product.images[1].src"
+                      :alt="product.image[1].alt"
+                      class="motion-reduce"
+                      loading="lazy"
+                    >
+                  </div>
+                </div>
+
+                <!-- Product Information Section -->
+                <div class="card__content">
+                  <div class="card__information">
+                    <h3 class="card__heading">
+                      <a :href="'/products/'+product.handle" class="full-unstyled-link" v-html="product.title"> </a>
+                    </h3>
+                  </div>
+
+                  <!-- Product Badge (Sold Out, On Sale) -->
+                  <div class="card__badge">
+                    <span v-if="product.variants[0].inventory_quantity < 1" class="badge badge--bottom-left">
+                      Sold Out
+                    </span>
+                    <span
+                      v-else-if="product.variants[0].compare_at_price > product.variants[0].price"
+                      class="badge badge--bottom-left"
+                    >
+                      On Sale
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="card__content">
+                <div class="card__information">
+                  <h3 class="card__heading h5">
+                    <a :href="'/products/'+product.handle" class="full-unstyled-link" v-html="product.title"></a>
+                  </h3>
+                  <div class="card-information">
+                      <div class="partfinder-status" :data-sku="product.id" hidden>
+                        <div class="status dahfitted">Fits your selected vehicle</div>
+                      </div>
+                    <div class="price ">
+                      <div class="price__container">
+                        <div class="price__regular">
+                          <span class="visually-hidden visually-hidden--inline">Regular price</span>
+                          <span
+                            class="price-item price-item--regular"
+                            v-html="'$'+product.variants[0].price"
+                          >
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card__badge bottom left"></div>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ul>
+      <div class="pagination-wrapper">
+  <nav class="pagination">
+    <ul class="pagination__list list-unstyled" role="list">
+      <!-- Previous Button -->
+      <li v-if="currentPage > 1">
+        <a
+          href="#"
+          @click.prevent="changePage(currentPage - 1)"
+          class="pagination__item pagination__item--prev pagination__item-arrow link motion-reduce"
+        >
+          {% render 'icon-caret' %}
+        </a>
+      </li>
+
+      <!-- Page Number Buttons -->
+      <li v-for="pageNumber in totalPages" :key="pageNumber">
+        <a
+          href="#"
+          :class="currentPage === pageNumber ? 'pagination__item--current light' : 'link'"
+          class="pagination__item"
+          @click.prevent="changePage(pageNumber)"
+          v-html="pageNumber"
+        ></a>
+      </li>
+
+      <!-- Next Button -->
+      <li v-if="currentPage < totalPages">
+        <a
+          href="#"
+          @click.prevent="changePage(currentPage + 1)"
+          class="pagination__item pagination__item--next pagination__item-arrow link motion-reduce"
+        >
+          {% render 'icon-caret' %}
+        </a>
+      </li>
+    </ul>
+  </nav>
+</div>
+  </div>
+</div>
+   <script src="https://cdn.jsdelivr.net/npm/vue@3.2.37/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{{ 'part-finder.js' | asset_url }}"></script>
+    <link rel="stylesheet" href="{{ 'part-finder.css' | asset_url }}" type="text/css">
+      <script src="{{ 'part-finder-result.js' | asset_url }}"></script>
+<script>
+  $('.card--standard').hide();
+    window.onload = function() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var acceptCheckbox = document.getElementById('accept');
+
+    // If the "all" parameter is "yes", check the checkbox
+    if (urlParams.get('all') === 'yes') {
+      acceptCheckbox.checked = true;
+    }
+  };
+
+  document.getElementById('accept').addEventListener('change', function() {
+    var url = new URL(window.location.href);
+
+    if (this.checked) {
+      // Add the 'all' parameter to the URL
+      url.searchParams.set('all', 'yes');
+    } else {
+      // Remove the 'all' parameter from the URL
+      url.searchParams.delete('all');
+    }
+
+    // Refresh the page with the updated URL
+    window.location.href = url.toString();
+  });
+</script>
+{% schema %}
+{
+  "name": "Custom Section",
+  "settings": [
+    {
+      "type": "text",
+      "label": "Section Title",
+      "id": "title",
+      "default": "Custom Title"
+    },
+    {
+      "type": "textarea",
+      "label": "Section Description",
+      "id": "description",
+      "default": "This is a description for the custom section."
+    },
+    {
+      "type": "product_list",
+      "label": "Select Products",
+      "id": "products"
+    }
+  ],
+  "presets": [
+    {
+      "name": "my",
+      "category": "Custom Sections"
+    }
+  ]
+}
+{% endschema %}
