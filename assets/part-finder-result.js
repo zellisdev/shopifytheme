@@ -125,7 +125,7 @@ var dahPFResultPage = Vue.createApp({
       const searchTerm =
         new URLSearchParams(window.location.search).get("q") || ""; // Get search query from URL
       const url = `https://demozellis.myshopify.com/admin/api/2024-10/products.json?&collection_id=${collectionName}&limit=50`;
-      const accessToken = "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";
+      const accessToken = "";
 
       let allProducts = [];
       let nextPageUrl = url;
